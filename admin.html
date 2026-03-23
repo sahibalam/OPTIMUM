@@ -60,7 +60,32 @@
           <div class="card">
             <h3 style="margin-top:0">Lectures</h3>
             <div class="form" style="padding:0">
-              <button id="refresh" class="btn btn-ghost" type="button">Refresh</button>
+              <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-bottom:10px">
+                <label style="margin:0">
+                  <span>Class</span>
+                  <select id="filterClass">
+                    <option value="">All</option>
+                  </select>
+                </label>
+                <label style="margin:0">
+                  <span>Section</span>
+                  <select id="filterSection">
+                    <option value="">All</option>
+                  </select>
+                </label>
+                <label style="margin:0">
+                  <span>Subject</span>
+                  <select id="filterSubject">
+                    <option value="">All</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap">
+                <button id="applyFilters" class="btn btn-primary" type="button">Apply filters</button>
+                <button id="clearFilters" class="btn btn-ghost" type="button">Clear</button>
+                <button id="refresh" class="btn btn-ghost" type="button">Refresh</button>
+              </div>
             </div>
             <div id="list" style="display:grid; gap:10px; margin-top:12px"></div>
           </div>
@@ -97,39 +122,55 @@
       }
 
       function apiUrl(cfg, path) {
-        const base = String(cfg.apiBase || '').replace(/\/+$/, '');
+        const base = String(cfg.apiBase || '').replace(/\/+$|\s+$/g, '');
         return `${base}${path}`;
       }
 
-      async function loadList() {
-        const cfg = getCfg();
-        const note = qs('#note');
+      function uniqSorted(arr) {
+        const s = new Set(arr.filter((x) => x !== null && x !== undefined && String(x).trim() !== '').map((x) => String(x).trim()));
+        return Array.from(s).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+      }
+
+      function setSelectOptions(selectEl, values) {
+        if (!selectEl) return;
+        const keep = selectEl.value;
+        selectEl.innerHTML = '<option value="">All</option>';
+        values.forEach((v) => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          selectEl.appendChild(opt);
+        });
+        if (values.includes(keep)) selectEl.value = keep;
+      }
+
+      function getFilters() {
+        return {
+          class: qs('#filterClass')?.value || '',
+          section: qs('#filterSection')?.value || '',
+          subject: qs('#filterSubject')?.value || '',
+        };
+      }
+
+      function filterItems(items, filters) {
+        const fc = String(filters.class || '').trim();
+        const fs = String(filters.section || '').trim().toLowerCase();
+        const fsub = String(filters.subject || '').trim().toLowerCase();
+
+        return items.filter((it) => {
+          if (fc && String(it.class || '').trim() !== fc) return false;
+          if (fs && String(it.section || '').trim().toLowerCase() !== fs) return false;
+          if (fsub && String(it.subject || '').trim().toLowerCase() !== fsub) return false;
+          return true;
+        });
+      }
+
+      function renderList(items) {
         const list = qs('#list');
-
-        if (!cfg.apiBase) {
-          note.textContent = 'Set API base URL first.';
-          return;
-        }
-
-        note.textContent = 'Loading…';
+        if (!list) return;
         list.innerHTML = '';
 
-        const res = await fetch(apiUrl(cfg, '/admin/lectures'), {
-          headers: {
-            Authorization: authHeader(cfg),
-          },
-        });
-
-        if (!res.ok) {
-          const txt = await res.text();
-          note.textContent = `Failed: ${res.status} ${txt}`;
-          return;
-        }
-
-        const data = await res.json();
-        note.textContent = `Loaded ${data.items.length} lectures.`;
-
-        data.items.forEach((item) => {
+        items.forEach((item) => {
           const row = document.createElement('div');
           row.className = 'info-item';
           row.style.gridTemplateColumns = '1fr auto';
@@ -166,9 +207,55 @@
               return;
             }
 
-            await loadList();
+            await loadList({ force: true });
           });
         });
+      }
+
+      async function loadList({ force = false } = {}) {
+        const cfg = getCfg();
+        const note = qs('#note');
+
+        if (!cfg.apiBase) {
+          note.textContent = 'Set API base URL first.';
+          return;
+        }
+
+        if (!force && Array.isArray(window.__lecturesCache)) {
+          const filters = getFilters();
+          const filtered = filterItems(window.__lecturesCache, filters);
+          note.textContent = `Loaded ${filtered.length} lectures.`;
+          renderList(filtered);
+          return;
+        }
+
+        note.textContent = 'Loading…';
+        renderList([]);
+
+        const res = await fetch(apiUrl(cfg, '/admin/lectures'), {
+          headers: {
+            Authorization: authHeader(cfg),
+          },
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          note.textContent = `Failed: ${res.status} ${txt}`;
+          return;
+        }
+
+        const data = await res.json();
+        const items = Array.isArray(data?.items) ? data.items : [];
+        window.__lecturesCache = items;
+
+        setSelectOptions(qs('#filterClass'), uniqSorted(items.map((x) => x.class)));
+        setSelectOptions(qs('#filterSection'), uniqSorted(items.map((x) => x.section)));
+        setSelectOptions(qs('#filterSubject'), uniqSorted(items.map((x) => x.subject)));
+
+        const filters = getFilters();
+        const filtered = filterItems(items, filters);
+        note.textContent = `Loaded ${filtered.length} lectures.`;
+        renderList(filtered);
       }
 
       (function init() {
@@ -197,7 +284,14 @@
           window.location.href = 'index.html';
         });
 
-        qs('#refresh').addEventListener('click', loadList);
+        qs('#refresh').addEventListener('click', () => loadList({ force: true }));
+        qs('#applyFilters').addEventListener('click', () => loadList({ force: false }));
+        qs('#clearFilters').addEventListener('click', () => {
+          if (qs('#filterClass')) qs('#filterClass').value = '';
+          if (qs('#filterSection')) qs('#filterSection').value = '';
+          if (qs('#filterSubject')) qs('#filterSubject').value = '';
+          loadList({ force: false });
+        });
 
         qs('#createForm').addEventListener('submit', async (e) => {
           e.preventDefault();
@@ -225,7 +319,7 @@
 
           note.textContent = 'Created.';
           e.target.reset();
-          await loadList();
+          await loadList({ force: true });
         });
       })();
     </script>
