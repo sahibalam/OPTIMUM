@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OPTIMUM Admin</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="section" style="padding-top:24px">
+      <div class="container" style="max-width:980px">
+        <div class="section-head">
+          <h2>Admin <span class="offerings-accent">Dashboard</span></h2>
+          <p>Manage recorded lectures</p>
+        </div>
+
+        <div class="card" style="margin-bottom:14px">
+          <h3 style="margin-top:0">API Settings</h3>
+          <div class="form" style="padding:0; max-width:680px">
+            <details id="advanced" style="margin:0">
+              <summary style="cursor:pointer; font-weight:900">Advanced</summary>
+              <label style="margin-top:10px">
+                <span>API Base URL</span>
+                <input id="apiBase" type="text" placeholder="https://xxxxx.execute-api.ap-south-1.amazonaws.com" />
+              </label>
+            </details>
+            <div style="display:flex; gap:10px; flex-wrap:wrap">
+              <button id="save" class="btn btn-primary" type="button">Save & Load</button>
+              <button id="logout" class="btn btn-ghost" type="button">Log out</button>
+            </div>
+            <p class="form-note" id="note" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <div class="cards" style="grid-template-columns:1fr;">
+          <div class="card">
+            <h3 style="margin-top:0">Create Lecture</h3>
+            <form id="createForm" class="form" style="padding:0; max-width:680px">
+              <label>
+                <span>Class</span>
+                <input name="class" required placeholder="10 / 11 / 12" />
+              </label>
+              <label>
+                <span>Section</span>
+                <input name="section" required placeholder="A" />
+              </label>
+              <label>
+                <span>Subject</span>
+                <input name="subject" required placeholder="Science" />
+              </label>
+              <label>
+                <span>YouTube URL</span>
+                <input name="youtubeUrl" required placeholder="https://youtu.be/..." />
+              </label>
+              <button class="btn btn-primary" type="submit">Create</button>
+              <p class="form-note" id="createNote" role="status" aria-live="polite"></p>
+            </form>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-top:0">Lectures</h3>
+            <div class="form" style="padding:0">
+              <button id="refresh" class="btn btn-ghost" type="button">Refresh</button>
+            </div>
+            <div id="list" style="display:grid; gap:10px; margin-top:12px"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const qs = (s, el = document) => el.querySelector(s);
+
+      const DEFAULT_API_BASE = 'https://3fhqqpu0di.execute-api.ap-south-1.amazonaws.com';
+
+      const storageKey = 'optimum_admin_cfg_v1';
+
+      function b64(s) {
+        return btoa(unescape(encodeURIComponent(s)));
+      }
+
+      function getCfg() {
+        try {
+          return JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch {
+          return {};
+        }
+      }
+
+      function setCfg(cfg) {
+        localStorage.setItem(storageKey, JSON.stringify(cfg));
+      }
+
+      function authHeader(cfg) {
+        const token = b64(`${cfg.user || ''}:${cfg.pass || ''}`);
+        return `Basic ${token}`;
+      }
+
+      function apiUrl(cfg, path) {
+        const base = String(cfg.apiBase || '').replace(/\/+$/, '');
+        return `${base}${path}`;
+      }
+
+      async function loadList() {
+        const cfg = getCfg();
+        const note = qs('#note');
+        const list = qs('#list');
+
+        if (!cfg.apiBase) {
+          note.textContent = 'Set API base URL first.';
+          return;
+        }
+
+        note.textContent = 'Loading…';
+        list.innerHTML = '';
+
+        const res = await fetch(apiUrl(cfg, '/admin/lectures'), {
+          headers: {
+            Authorization: authHeader(cfg),
+          },
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          note.textContent = `Failed: ${res.status} ${txt}`;
+          return;
+        }
+
+        const data = await res.json();
+        note.textContent = `Loaded ${data.items.length} lectures.`;
+
+        data.items.forEach((item) => {
+          const row = document.createElement('div');
+          row.className = 'info-item';
+          row.style.gridTemplateColumns = '1fr auto';
+          row.innerHTML = `
+            <div>
+              <div style="font-weight:900">Class ${item.class} • ${item.section} • ${item.subject}</div>
+              <div class="muted" style="font-size:12px; margin-top:4px; word-break:break-all">${item.youtubeUrl}</div>
+              <div class="muted" style="font-size:12px; margin-top:4px">${item.createdAt || ''}</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end">
+              <button class="btn btn-ghost" type="button" data-del="${item.id}">Delete</button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+
+        list.querySelectorAll('[data-del]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-del');
+            if (!id) return;
+            if (!confirm('Delete this lecture?')) return;
+
+            const cfg2 = getCfg();
+            const res2 = await fetch(apiUrl(cfg2, `/admin/lectures/${id}`), {
+              method: 'DELETE',
+              headers: {
+                Authorization: authHeader(cfg2),
+              },
+            });
+
+            if (!res2.ok) {
+              const txt = await res2.text();
+              qs('#note').textContent = `Delete failed: ${res2.status} ${txt}`;
+              return;
+            }
+
+            await loadList();
+          });
+        });
+      }
+
+      (function init() {
+        const cfg = getCfg();
+        const base = cfg.apiBase || DEFAULT_API_BASE;
+        if (qs('#apiBase')) qs('#apiBase').value = base;
+        if (!cfg.apiBase) setCfg({ ...cfg, apiBase: base });
+
+        if (!cfg.user || !cfg.pass) {
+          qs('#note').textContent = 'Not logged in. Go back and open Dashboard again.';
+        }
+
+        qs('#save').addEventListener('click', async () => {
+          const prev = getCfg();
+          const advancedOpen = !!qs('#advanced')?.open;
+          const nextBase = advancedOpen ? qs('#apiBase')?.value.trim() : (prev.apiBase || DEFAULT_API_BASE);
+          setCfg({
+            ...prev,
+            apiBase: nextBase,
+          });
+          await loadList();
+        });
+
+        qs('#logout').addEventListener('click', () => {
+          localStorage.removeItem(storageKey);
+          window.location.href = 'index.html';
+        });
+
+        qs('#refresh').addEventListener('click', loadList);
+
+        qs('#createForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const cfg2 = getCfg();
+          const note = qs('#createNote');
+          note.textContent = 'Creating…';
+
+          const fd = new FormData(e.target);
+          const payload = Object.fromEntries(fd.entries());
+
+          const res = await fetch(apiUrl(cfg2, '/admin/lectures'), {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              Authorization: authHeader(cfg2),
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            note.textContent = `Failed: ${res.status} ${txt}`;
+            return;
+          }
+
+          note.textContent = 'Created.';
+          e.target.reset();
+          await loadList();
+        });
+      })();
+    </script>
+  </body>
+</html>

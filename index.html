@@ -468,6 +468,7 @@
           <a href="#programs">Programs</a>
           <a href="#features">Why OPTIMUM</a>
           <a href="#contact">Contact</a>
+          <button class="footer-admin" type="button" id="dashboardLink">Dashboard</button>
         </div>
       </div>
       <div class="container footer-bottom">
@@ -475,6 +476,25 @@
         <span class="muted">Built with HTML • CSS • JavaScript</span>
       </div>
     </footer>
+
+    <dialog id="adminDialog" aria-label="Admin login">
+      <form method="dialog" class="form" id="adminDialogForm">
+        <h3 style="margin:0">Admin Login</h3>
+        <label>
+          <span>Username</span>
+          <input type="text" name="user" autocomplete="username" required />
+        </label>
+        <label>
+          <span>Password</span>
+          <input type="password" name="pass" autocomplete="current-password" required />
+        </label>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn btn-primary" value="ok">Continue</button>
+          <button class="btn btn-ghost" value="cancel">Cancel</button>
+        </div>
+        <p class="form-note" id="adminDialogNote" role="status" aria-live="polite"></p>
+      </form>
+    </dialog>
 
     <script src="script.js"></script>
   </body>

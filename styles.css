@@ -613,7 +613,9 @@ img{max-width:100%; display:block}
 .hscroll-nav:disabled{opacity:.45; cursor:not-allowed}
 
 .hscroll-viewport{
-  overflow:auto;
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:hidden;
   outline:none;
   scrollbar-width:none;
   scroll-behavior:smooth;
@@ -628,7 +630,21 @@ img{max-width:100%; display:block}
   display:flex;
   gap:14px;
   padding:4px 2px;
-  scroll-snap-type:x mandatory;
+  width:max-content;
+}
+
+@keyframes students-marquee{
+  from{transform:translateX(0)}
+  to{transform:translateX(-50%)}
+}
+
+#studentsCarousel .hscroll-viewport{overflow:hidden}
+#studentsCarousel .hscroll-track{animation:students-marquee 22s linear infinite; will-change:transform}
+#studentsCarousel:hover .hscroll-track{animation-play-state:paused}
+#studentsCarousel .hscroll-viewport:focus-within .hscroll-track{animation-play-state:paused}
+
+@media (prefers-reduced-motion: reduce){
+  #studentsCarousel .hscroll-track{animation:none}
 }
 
 .scard{

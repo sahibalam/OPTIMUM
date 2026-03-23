@@ -1,6 +1,102 @@
 const qs = (s, el = document) => el.querySelector(s);
 const qsa = (s, el = document) => Array.from(el.querySelectorAll(s));
 
+const API_BASE = 'https://3fhqqpu0di.execute-api.ap-south-1.amazonaws.com';
+
+function youtubeEmbedUrl(url) {
+  const u = String(url || '').trim();
+  if (!u) return '';
+  try {
+    const parsed = new URL(u);
+    if (parsed.hostname.includes('youtu.be')) {
+      const id = parsed.pathname.replace('/', '').trim();
+      return id ? `https://www.youtube-nocookie.com/embed/${id}` : '';
+    }
+    if (parsed.hostname.includes('youtube.com')) {
+      const id = parsed.searchParams.get('v');
+      return id ? `https://www.youtube-nocookie.com/embed/${id}` : '';
+    }
+    return '';
+  } catch {
+    const m = u.match(/(?:youtu\.be\/|v=)([\w-]{6,})/i);
+    return m ? `https://www.youtube-nocookie.com/embed/${m[1]}` : '';
+  }
+}
+
+function youtubeVideoId(url) {
+  const u = String(url || '').trim();
+  if (!u) return '';
+  try {
+    const parsed = new URL(u);
+    if (parsed.hostname.includes('youtu.be')) {
+      return parsed.pathname.replace('/', '').trim();
+    }
+    if (parsed.hostname.includes('youtube.com')) {
+      return parsed.searchParams.get('v') || '';
+    }
+    return '';
+  } catch {
+    const m = u.match(/(?:youtu\.be\/|v=)([\w-]{6,})/i);
+    return m ? m[1] : '';
+  }
+}
+
+function youtubeThumbnailUrl(url) {
+  const id = youtubeVideoId(url);
+  if (!id) return '';
+  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+}
+
+function setupLecturePlayer() {
+  if (qs('#lecturePlayer')) return;
+
+  const dlg = document.createElement('dialog');
+  dlg.id = 'lecturePlayer';
+  dlg.setAttribute('aria-label', 'Lecture player');
+  dlg.innerHTML = `
+    <form method="dialog" class="form" style="margin:0; max-width:900px">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px">
+        <h3 id="lecturePlayerTitle" style="margin:0">Lecture</h3>
+        <button class="btn btn-ghost" value="close" type="submit">Close</button>
+      </div>
+      <div style="margin-top:12px; aspect-ratio:16/9; width:min(860px, 84vw)">
+        <iframe
+          id="lecturePlayerFrame"
+          title="Lecture video"
+          width="100%"
+          height="100%"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </form>
+  `;
+
+  dlg.addEventListener('close', () => {
+    const frame = qs('#lecturePlayerFrame', dlg);
+    if (frame) frame.removeAttribute('src');
+  });
+
+  document.body.appendChild(dlg);
+}
+
+function openLecturePlayer({ title, youtubeUrl } = {}) {
+  setupLecturePlayer();
+  const dlg = qs('#lecturePlayer');
+  if (!dlg) return;
+
+  const src = youtubeEmbedUrl(youtubeUrl);
+  if (!src) return;
+
+  const h = qs('#lecturePlayerTitle', dlg);
+  const frame = qs('#lecturePlayerFrame', dlg);
+  if (h) h.textContent = title || 'Lecture';
+  if (frame) frame.setAttribute('src', src + '?autoplay=1');
+
+  if (typeof dlg.showModal === 'function') dlg.showModal();
+}
+
 function setYear() {
   const y = qs('#year');
   if (y) y.textContent = String(new Date().getFullYear());
@@ -25,6 +121,47 @@ function setupMobileNav() {
 
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') close();
+  });
+}
+
+function setupDashboardGate() {
+  const btn = qs('#dashboardLink');
+  const dlg = qs('#adminDialog');
+  const form = qs('#adminDialogForm');
+  const note = qs('#adminDialogNote');
+  if (!btn || !dlg || !form) return;
+
+  const storageKey = 'optimum_admin_cfg_v1';
+  const getCfg = () => {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey) || '{}');
+    } catch {
+      return {};
+    }
+  };
+
+  btn.addEventListener('click', () => {
+    const cfg = getCfg();
+    if (form.user) form.user.value = cfg.user || '';
+    if (form.pass) form.pass.value = cfg.pass || '';
+    if (note) note.textContent = '';
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else window.location.href = 'admin.html';
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const user = (form.user?.value || '').trim();
+    const pass = form.pass?.value || '';
+    if (!user || !pass) {
+      if (note) note.textContent = 'Enter username and password.';
+      return;
+    }
+
+    const cfg = getCfg();
+    const apiBase = cfg.apiBase || API_BASE;
+    localStorage.setItem(storageKey, JSON.stringify({ apiBase, user, pass }));
+    window.location.href = 'admin.html';
   });
 }
 
@@ -309,64 +446,6 @@ function setupStudentsCarousel() {
     });
     track.dataset.cloned = 'true';
   }
-
-  const getLoopPoint = () => {
-    if (!track) return 0;
-    return Math.floor(track.scrollWidth / 2);
-  };
-
-  const wrap = () => {
-    const loopPoint = getLoopPoint();
-    if (!loopPoint) return;
-    if (viewport.scrollLeft >= loopPoint) viewport.scrollLeft -= loopPoint;
-    if (viewport.scrollLeft < 0) viewport.scrollLeft += loopPoint;
-  };
-
-  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduceMotion) return;
-
-  let raf = 0;
-  let paused = false;
-
-  const tick = () => {
-    if (!paused) {
-      viewport.scrollLeft += 0.35;
-      wrap();
-    }
-    raf = window.requestAnimationFrame(tick);
-  };
-
-  const start = () => {
-    if (raf) return;
-    raf = window.requestAnimationFrame(tick);
-  };
-
-  const stop = () => {
-    if (!raf) return;
-    window.cancelAnimationFrame(raf);
-    raf = 0;
-  };
-
-  const pause = () => {
-    paused = true;
-  };
-
-  const resume = () => {
-    paused = false;
-  };
-
-  root.addEventListener('mouseenter', pause);
-  root.addEventListener('mouseleave', resume);
-  viewport.addEventListener('focusin', pause);
-  viewport.addEventListener('focusout', resume);
-  viewport.addEventListener('pointerdown', pause);
-  viewport.addEventListener('pointerup', resume);
-  viewport.addEventListener('pointercancel', resume);
-  window.addEventListener('blur', pause);
-
-  viewport.addEventListener('scroll', wrap, { passive: true });
-
-  start();
 }
 
 function setupOfferingsTabs() {
@@ -377,6 +456,15 @@ function setupOfferingsTabs() {
     const tabs = qsa('.tab', root);
     if (!tabs.length) return;
 
+    const isLecturesTabs = !!qs('#lecturesCarousel') && root.closest('section')?.getAttribute('aria-label') === 'Recorded lectures offerings';
+
+    const labelToClass = (label) => {
+      const s = String(label || '').toLowerCase();
+      if (s.includes('12 pass')) return '12pass';
+      const m = s.match(/class\s*(\d+)/);
+      return m ? m[1] : '';
+    };
+
     tabs.forEach((t) => {
       t.addEventListener('click', () => {
         tabs.forEach((x) => {
@@ -385,13 +473,104 @@ function setupOfferingsTabs() {
         });
         t.classList.add('active');
         t.setAttribute('aria-selected', 'true');
+
+        if (isLecturesTabs) {
+          const klass = labelToClass(t.textContent);
+          loadRecordedLectures({ class: klass });
+        }
       });
     });
+
+    if (isLecturesTabs) {
+      const active = tabs.find((x) => x.classList.contains('active')) || tabs[0];
+      const klass = labelToClass(active?.textContent);
+      loadRecordedLectures({ class: klass });
+    }
   });
+}
+
+function loadRecordedLectures({ class: klass } = {}) {
+  const root = qs('#lecturesCarousel');
+  if (!root) return;
+  const track = qs('.notes-track', root);
+  if (!track) return;
+
+  const url = new URL(API_BASE + '/lectures');
+  if (klass) url.searchParams.set('class', klass);
+
+  fetch(url.toString())
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+    .then((data) => {
+      const items = Array.isArray(data?.items) ? data.items : [];
+      track.innerHTML = '';
+
+      if (!items.length) {
+        const empty = document.createElement('article');
+        empty.className = 'note-card';
+        empty.style.cssText = '--card:#f1f5f9; --ring:#94a3b8';
+        empty.innerHTML = '<div class="note-top"><div class="note-title"><strong>No</strong><br />lectures yet</div></div>';
+        track.appendChild(empty);
+        return;
+      }
+
+      items.slice(0, 12).forEach((it) => {
+        const card = document.createElement('article');
+        card.className = 'note-card';
+        card.style.cssText = '--card:#dbeafe; --ring:#3b82f6';
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
+        card.setAttribute('aria-label', `Play ${it.subject} lecture`);
+        const thumb = youtubeThumbnailUrl(it.youtubeUrl) || 'assets/lectures/lec2.jpg';
+        card.innerHTML = `
+          <div class="note-top">
+            <div class="note-title"><strong>${escapeHtml(it.subject || 'Lecture')}</strong><br />recorded lecture</div>
+          </div>
+          <div class="note-circle"><img src="${thumb}" alt="${escapeHtml(it.subject || 'Lecture')} recorded lecture" /></div>
+        `;
+
+        const play = () => {
+          openLecturePlayer({
+            title: `${it.subject || 'Lecture'} (Class ${it.class || ''}${it.section ? ' ' + it.section : ''})`,
+            youtubeUrl: it.youtubeUrl,
+          });
+        };
+
+        card.addEventListener('click', play);
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            play();
+          }
+        });
+
+        track.appendChild(card);
+      });
+    })
+    .catch(() => {
+      track.innerHTML = '';
+      const fail = document.createElement('article');
+      fail.className = 'note-card';
+      fail.style.cssText = '--card:#ffe4e6; --ring:#fb7185';
+      fail.innerHTML = '<div class="note-top"><div class="note-title"><strong>Failed</strong><br />to load</div></div>';
+      track.appendChild(fail);
+    });
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 setYear();
 setupMobileNav();
+setupDashboardGate();
 setupCounters();
 setupForms();
 setupProgramsCarousel();
