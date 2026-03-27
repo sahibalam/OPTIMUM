@@ -8,85 +8,317 @@
   </head>
   <body>
     <main class="section" style="padding-top:24px">
-      <div class="container" style="max-width:980px">
-        <div class="section-head">
-          <h2>Admin <span class="offerings-accent">Dashboard</span></h2>
-          <p>Manage recorded lectures</p>
-        </div>
-
-        <div class="card" style="margin-bottom:14px">
-          <h3 style="margin-top:0">API Settings</h3>
-          <div class="form" style="padding:0; max-width:680px">
-            <details id="advanced" style="margin:0">
-              <summary style="cursor:pointer; font-weight:900">Advanced</summary>
-              <label style="margin-top:10px">
-                <span>API Base URL</span>
-                <input id="apiBase" type="text" placeholder="https://xxxxx.execute-api.ap-south-1.amazonaws.com" />
-              </label>
-            </details>
-            <div style="display:flex; gap:10px; flex-wrap:wrap">
-              <button id="save" class="btn btn-primary" type="button">Save & Load</button>
-              <button id="logout" class="btn btn-ghost" type="button">Log out</button>
-            </div>
-            <p class="form-note" id="note" role="status" aria-live="polite"></p>
-          </div>
-        </div>
-
-        <div class="cards" style="grid-template-columns:1fr;">
-          <div class="card">
-            <h3 style="margin-top:0">Create Lecture</h3>
-            <form id="createForm" class="form" style="padding:0; max-width:680px">
-              <label>
-                <span>Class</span>
-                <input name="class" required placeholder="10 / 11 / 12" />
-              </label>
-              <label>
-                <span>Section</span>
-                <input name="section" required placeholder="A" />
-              </label>
-              <label>
-                <span>Subject</span>
-                <input name="subject" required placeholder="Science" />
-              </label>
-              <label>
-                <span>YouTube URL</span>
-                <input name="youtubeUrl" required placeholder="https://youtu.be/..." />
-              </label>
-              <button class="btn btn-primary" type="submit">Create</button>
-              <p class="form-note" id="createNote" role="status" aria-live="polite"></p>
-            </form>
-          </div>
-
-          <div class="card">
-            <h3 style="margin-top:0">Lectures</h3>
-            <div class="form" style="padding:0">
-              <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-bottom:10px">
-                <label style="margin:0">
-                  <span>Class</span>
-                  <select id="filterClass">
-                    <option value="">All</option>
-                  </select>
-                </label>
-                <label style="margin:0">
-                  <span>Section</span>
-                  <select id="filterSection">
-                    <option value="">All</option>
-                  </select>
-                </label>
-                <label style="margin:0">
-                  <span>Subject</span>
-                  <select id="filterSubject">
-                    <option value="">All</option>
-                  </select>
-                </label>
+      <div class="container" style="max-width:1100px">
+        <div class="admin-shell" style="display:grid; grid-template-columns:240px minmax(0, 1fr); gap:14px; align-items:start">
+          <aside class="card admin-aside" style="position:sticky; top:14px">
+            <div style="display:flex; flex-direction:column; gap:10px">
+              <div>
+                <div style="font-weight:1000; font-size:16px">OPTIMUM</div>
+                <div class="muted" style="font-size:12px; margin-top:2px">Admin Dashboard</div>
               </div>
 
-              <div style="display:flex; gap:10px; flex-wrap:wrap">
-                <button id="refresh" class="btn btn-ghost" type="button">Refresh</button>
+              <div style="display:grid; gap:10px">
+                <button class="btn btn-ghost" type="button" data-tab="lectures" id="tabLectures">Lectures</button>
+                <button class="btn btn-ghost" type="button" data-tab="materials" id="tabMaterials">Study Materials</button>
+                <button class="btn btn-ghost" type="button" data-tab="yearspapers" id="tabYears">Year's Papers</button>
+                <button class="btn btn-ghost" type="button" data-tab="chaptersolutions" id="tabChapters">Chapters Solution</button>
+                <button class="btn btn-ghost" type="button" data-tab="announcements" id="tabAnnouncements">Announcement</button>
+                <button class="btn btn-ghost" type="button" data-tab="timetables" id="tabTimetables">Time-table</button>
+              </div>
+
+              <div style="border-top:1px solid rgba(15,23,42,.12); padding-top:10px">
+                <button id="logout" class="btn btn-ghost" type="button" style="width:100%">Log out</button>
               </div>
             </div>
-            <div id="list" style="display:grid; gap:10px; margin-top:12px"></div>
-          </div>
+          </aside>
+
+          <section>
+            <div class="section-head" style="margin-bottom:14px">
+              <h2 style="margin-bottom:2px">Admin <span class="offerings-accent">Dashboard</span></h2>
+              <p id="pageSubtitle">Manage recorded lectures</p>
+            </div>
+
+            <div class="card admin-api-settings" style="margin-bottom:14px" hidden>
+              <h3 style="margin-top:0">API Settings</h3>
+              <div class="form" style="padding:0; max-width:680px">
+                <details id="advanced" style="margin:0">
+                  <summary style="cursor:pointer; font-weight:900">Advanced</summary>
+                  <label style="margin-top:10px">
+                    <span>API Base URL</span>
+                    <input id="apiBase" type="text" placeholder="https://xxxxx.execute-api.ap-south-1.amazonaws.com" />
+                  </label>
+                </details>
+                <div style="display:flex; gap:10px; flex-wrap:wrap">
+                  <button id="save" class="btn btn-primary" type="button">Save & Load</button>
+                </div>
+                <p class="form-note" id="note" role="status" aria-live="polite"></p>
+              </div>
+            </div>
+
+            <section id="panelLectures" data-panel="lectures">
+              <div class="cards" style="grid-template-columns:1fr;">
+                <div class="card">
+                  <h3 style="margin-top:0">Create Lecture</h3>
+                  <form id="createForm" class="form" style="padding:0; max-width:680px">
+                    <label>
+                      <span>Class</span>
+                      <input name="class" required placeholder="10 / 11 / 12" />
+                    </label>
+                    <label>
+                      <span>Section</span>
+                      <input name="section" required placeholder="A" />
+                    </label>
+                    <label>
+                      <span>Subject</span>
+                      <input name="subject" required placeholder="Science" />
+                    </label>
+                    <label>
+                      <span>YouTube URL</span>
+                      <input name="youtubeUrl" required placeholder="https://youtu.be/..." />
+                    </label>
+                    <button class="btn btn-primary" type="submit">Create</button>
+                    <p class="form-note" id="createNote" role="status" aria-live="polite"></p>
+                  </form>
+                </div>
+
+                <div class="card">
+                  <h3 style="margin-top:0">Lectures</h3>
+                  <div class="form" style="padding:0">
+                    <div class="admin-filters" style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-bottom:10px">
+                      <label style="margin:0">
+                        <span>Class</span>
+                        <select id="filterClass">
+                          <option value="">All</option>
+                        </select>
+                      </label>
+                      <label style="margin:0">
+                        <span>Section</span>
+                        <select id="filterSection">
+                          <option value="">All</option>
+                        </select>
+                      </label>
+                      <label style="margin:0">
+                        <span>Subject</span>
+                        <select id="filterSubject">
+                          <option value="">All</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <div style="display:flex; gap:10px; flex-wrap:wrap">
+                      <button id="refresh" class="btn btn-ghost" type="button">Refresh</button>
+                    </div>
+                  </div>
+                  <div id="list" style="display:grid; gap:10px; margin-top:12px"></div>
+                </div>
+              </div>
+            </section>
+
+            <section id="panelMaterials" data-panel="materials" hidden>
+              <div class="cards" style="grid-template-columns:1fr;">
+                <div class="card">
+                  <h3 style="margin-top:0">Upload Study Material (PDF)</h3>
+                  <form id="materialForm" class="form" style="padding:0; max-width:680px">
+                    <input type="hidden" name="category" value="materials" />
+                    <label>
+                      <span>Class</span>
+                      <input name="class" required placeholder="10 / 11 / 12pass" />
+                    </label>
+                    <label>
+                      <span>Section</span>
+                      <input name="section" required placeholder="A" />
+                    </label>
+                    <label>
+                      <span>Subject</span>
+                      <input name="subject" required placeholder="Science" />
+                    </label>
+                    <label>
+                      <span>Title (optional)</span>
+                      <input name="title" placeholder="Chapter 1 Notes" />
+                    </label>
+                    <label>
+                      <span>PDF File</span>
+                      <input name="file" type="file" accept="application/pdf" required />
+                    </label>
+                    <button class="btn btn-primary" type="submit">Upload</button>
+                    <p class="form-note" id="materialNote" role="status" aria-live="polite"></p>
+                  </form>
+                </div>
+
+                <div class="card">
+                  <h3 style="margin-top:0">Study Materials</h3>
+                  <div class="form" style="padding:0">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap">
+                      <button id="materialsRefresh" class="btn btn-ghost" type="button">Refresh</button>
+                    </div>
+                  </div>
+                  <div id="materialsList" style="display:grid; gap:10px; margin-top:12px"></div>
+                </div>
+              </div>
+            </section>
+
+            <section id="panelYears" data-panel="yearspapers" hidden>
+              <div class="cards" style="grid-template-columns:1fr;">
+                <div class="card">
+                  <h3 style="margin-top:0">Upload Year's Paper (PDF)</h3>
+                  <form id="yearsForm" class="form" style="padding:0; max-width:680px">
+                    <input type="hidden" name="category" value="yearspapers" />
+                    <label>
+                      <span>Class</span>
+                      <input name="class" required placeholder="10 / 11 / 12pass" />
+                    </label>
+                    <label>
+                      <span>Section</span>
+                      <input name="section" required placeholder="A" />
+                    </label>
+                    <label>
+                      <span>Subject</span>
+                      <input name="subject" required placeholder="Science" />
+                    </label>
+                    <label>
+                      <span>Year</span>
+                      <input name="year" required placeholder="2024" />
+                    </label>
+                    <label>
+                      <span>Title (optional)</span>
+                      <input name="title" placeholder="Final Exam Paper" />
+                    </label>
+                    <label>
+                      <span>PDF File</span>
+                      <input name="file" type="file" accept="application/pdf" required />
+                    </label>
+                    <button class="btn btn-primary" type="submit">Upload</button>
+                    <p class="form-note" id="yearsNote" role="status" aria-live="polite"></p>
+                  </form>
+                </div>
+
+                <div class="card">
+                  <h3 style="margin-top:0">Year's Papers</h3>
+                  <div class="form" style="padding:0">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap">
+                      <button id="yearsRefresh" class="btn btn-ghost" type="button">Refresh</button>
+                    </div>
+                  </div>
+                  <div id="yearsList" style="display:grid; gap:10px; margin-top:12px"></div>
+                </div>
+              </div>
+            </section>
+
+            <section id="panelChapters" data-panel="chaptersolutions" hidden>
+              <div class="cards" style="grid-template-columns:1fr;">
+                <div class="card">
+                  <h3 style="margin-top:0">Upload Chapter Solution (PDF)</h3>
+                  <form id="chaptersForm" class="form" style="padding:0; max-width:680px">
+                    <input type="hidden" name="category" value="chaptersolutions" />
+                    <label>
+                      <span>Class</span>
+                      <input name="class" required placeholder="10 / 11 / 12pass" />
+                    </label>
+                    <label>
+                      <span>Section</span>
+                      <input name="section" required placeholder="A" />
+                    </label>
+                    <label>
+                      <span>Subject</span>
+                      <input name="subject" required placeholder="Science" />
+                    </label>
+                    <label>
+                      <span>Chapter (optional)</span>
+                      <input name="chapter" placeholder="Chapter 1" />
+                    </label>
+                    <label>
+                      <span>Title (optional)</span>
+                      <input name="title" placeholder="Chapter 1 Solutions" />
+                    </label>
+                    <label>
+                      <span>PDF File</span>
+                      <input name="file" type="file" accept="application/pdf" required />
+                    </label>
+                    <button class="btn btn-primary" type="submit">Upload</button>
+                    <p class="form-note" id="chaptersNote" role="status" aria-live="polite"></p>
+                  </form>
+                </div>
+
+                <div class="card">
+                  <h3 style="margin-top:0">Chapters Solution</h3>
+                  <div class="form" style="padding:0">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap">
+                      <button id="chaptersRefresh" class="btn btn-ghost" type="button">Refresh</button>
+                    </div>
+                  </div>
+                  <div id="chaptersList" style="display:grid; gap:10px; margin-top:12px"></div>
+                </div>
+              </div>
+            </section>
+
+            <section id="panelAnnouncements" data-panel="announcements" hidden>
+              <div class="cards" style="grid-template-columns:1fr;">
+                <div class="card">
+                  <h3 style="margin-top:0">Create Announcement</h3>
+                  <form id="announcementForm" class="form" style="padding:0; max-width:680px">
+                    <label>
+                      <span>Class</span>
+                      <input name="class" required placeholder="10 / 11 / 12pass" />
+                    </label>
+                    <label>
+                      <span>Section</span>
+                      <input name="section" required placeholder="A" />
+                    </label>
+                    <label>
+                      <span>Announcement</span>
+                      <textarea name="text" rows="4" required placeholder="Write announcement..."></textarea>
+                    </label>
+                    <button class="btn btn-primary" type="submit">Submit</button>
+                    <p class="form-note" id="announcementNote" role="status" aria-live="polite"></p>
+                  </form>
+                </div>
+
+                <div class="card">
+                  <h3 style="margin-top:0">Announcements</h3>
+                  <div class="form" style="padding:0">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap">
+                      <button id="announcementsRefresh" class="btn btn-ghost" type="button">Refresh</button>
+                    </div>
+                  </div>
+                  <div id="announcementsList" style="display:grid; gap:10px; margin-top:12px"></div>
+                </div>
+              </div>
+            </section>
+
+            <section id="panelTimetables" data-panel="timetables" hidden>
+              <div class="cards" style="grid-template-columns:1fr;">
+                <div class="card">
+                  <h3 style="margin-top:0">Upload Time-table (PDF)</h3>
+                  <form id="timetableForm" class="form" style="padding:0; max-width:680px">
+                    <label>
+                      <span>Class</span>
+                      <input name="class" required placeholder="10 / 11 / 12pass" />
+                    </label>
+                    <label>
+                      <span>Section</span>
+                      <input name="section" required placeholder="A" />
+                    </label>
+                    <label>
+                      <span>PDF File</span>
+                      <input name="file" type="file" accept="application/pdf" required />
+                    </label>
+                    <button class="btn btn-primary" type="submit">Upload</button>
+                    <p class="form-note" id="timetableNote" role="status" aria-live="polite"></p>
+                  </form>
+                </div>
+
+                <div class="card">
+                  <h3 style="margin-top:0">Time-tables</h3>
+                  <div class="form" style="padding:0">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap">
+                      <button id="timetablesRefresh" class="btn btn-ghost" type="button">Refresh</button>
+                    </div>
+                  </div>
+                  <div id="timetablesList" style="display:grid; gap:10px; margin-top:12px"></div>
+                </div>
+              </div>
+            </section>
+          </section>
         </div>
       </div>
     </main>
@@ -100,6 +332,275 @@
 
       function b64(s) {
         return btoa(unescape(encodeURIComponent(s)));
+      }
+
+      function renderChapters(items) {
+        const list = qs('#chaptersList');
+        if (!list) return;
+        list.innerHTML = '';
+
+        items.forEach((item) => {
+          const row = document.createElement('div');
+          row.className = 'info-item';
+          row.style.gridTemplateColumns = '1fr auto';
+          const title = (item.title || item.fileName || 'Chapter Solution').trim();
+          const link = item.webViewLink || item.webContentLink || '';
+          row.innerHTML = `
+            <div>
+              <div style="font-weight:900">Class ${item.class} • ${item.section} • ${item.subject}${item.chapter ? ' • ' + item.chapter : ''}</div>
+              <div class="muted" style="font-size:12px; margin-top:4px">${title}</div>
+              ${link ? `<div class="muted" style="font-size:12px; margin-top:4px; word-break:break-all"><a href="${link}" target="_blank" rel="noopener">Open PDF</a></div>` : ''}
+              <div class="muted" style="font-size:12px; margin-top:4px">${item.createdAt || ''}</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end">
+              <button class="btn btn-ghost" type="button" data-cdel="${item.id}">Delete</button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+
+        list.querySelectorAll('[data-cdel]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-cdel');
+            if (!id) return;
+            if (!confirm('Delete this chapter solution?')) return;
+
+            const cfg2 = getCfg();
+            const res2 = await fetch(apiUrl(cfg2, `/admin/materials/${id}`), {
+              method: 'DELETE',
+              headers: {
+                Authorization: authHeader(cfg2),
+              },
+            });
+
+            if (!res2.ok) {
+              const txt = await res2.text();
+              qs('#chaptersNote').textContent = `Delete failed: ${res2.status} ${txt}`;
+              return;
+            }
+
+            await loadChapters({ force: true });
+          });
+        });
+      }
+
+      function renderMaterials(items) {
+        const list = qs('#materialsList');
+        if (!list) return;
+        list.innerHTML = '';
+
+        items.forEach((item) => {
+          const row = document.createElement('div');
+          row.className = 'info-item';
+          row.style.gridTemplateColumns = '1fr auto';
+          const title = (item.title || item.fileName || 'Material').trim();
+          const link = item.webViewLink || item.webContentLink || '';
+          const cat = String(item.category || 'materials').toLowerCase();
+          row.innerHTML = `
+            <div>
+              <div style="font-weight:900">Class ${item.class} • ${item.section} • ${item.subject}</div>
+              <div class="muted" style="font-size:12px; margin-top:4px">${title}</div>
+              <div class="muted" style="font-size:12px; margin-top:4px">${cat === 'yearspapers' ? "Year's Paper" : 'Study Material'} (PDF)</div>
+              ${link ? `<div class="muted" style="font-size:12px; margin-top:4px; word-break:break-all"><a href="${link}" target="_blank" rel="noopener">Open PDF</a></div>` : ''}
+              <div class="muted" style="font-size:12px; margin-top:4px">${item.createdAt || ''}</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end">
+              <button class="btn btn-ghost" type="button" data-mdel="${item.id}">Delete</button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+
+        list.querySelectorAll('[data-mdel]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-mdel');
+            if (!id) return;
+            if (!confirm('Delete this study material?')) return;
+
+            const cfg2 = getCfg();
+            const res2 = await fetch(apiUrl(cfg2, `/admin/materials/${id}`), {
+              method: 'DELETE',
+              headers: {
+                Authorization: authHeader(cfg2),
+              },
+            });
+
+            if (!res2.ok) {
+              const txt = await res2.text();
+              qs('#materialNote').textContent = `Delete failed: ${res2.status} ${txt}`;
+              return;
+            }
+
+            await loadMaterials({ force: true });
+          });
+        });
+      }
+
+      function renderYears(items) {
+        const list = qs('#yearsList');
+        if (!list) return;
+        list.innerHTML = '';
+
+        items.forEach((item) => {
+          const row = document.createElement('div');
+          row.className = 'info-item';
+          row.style.gridTemplateColumns = '1fr auto';
+          const title = (item.title || item.fileName || "Year's Paper").trim();
+          const link = item.webViewLink || item.webContentLink || '';
+          row.innerHTML = `
+            <div>
+              <div style="font-weight:900">Class ${item.class} • ${item.section} • ${item.subject} • ${item.year || ''}</div>
+              <div class="muted" style="font-size:12px; margin-top:4px">${title}</div>
+              ${link ? `<div class="muted" style="font-size:12px; margin-top:4px; word-break:break-all"><a href="${link}" target="_blank" rel="noopener">Open PDF</a></div>` : ''}
+              <div class="muted" style="font-size:12px; margin-top:4px">${item.createdAt || ''}</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end">
+              <button class="btn btn-ghost" type="button" data-ydel="${item.id}">Delete</button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+
+        list.querySelectorAll('[data-ydel]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-ydel');
+            if (!id) return;
+            if (!confirm("Delete this year's paper?")) return;
+
+            const cfg2 = getCfg();
+            const res2 = await fetch(apiUrl(cfg2, `/admin/materials/${id}`), {
+              method: 'DELETE',
+              headers: {
+                Authorization: authHeader(cfg2),
+              },
+            });
+
+            if (!res2.ok) {
+              const txt = await res2.text();
+              qs('#yearsNote').textContent = `Delete failed: ${res2.status} ${txt}`;
+              return;
+            }
+
+            await loadYears({ force: true });
+          });
+        });
+      }
+
+      async function loadMaterials({ force = false } = {}) {
+        const cfg = getCfg();
+        const note = qs('#materialNote');
+
+        if (!cfg.apiBase) {
+          if (note) note.textContent = 'Set API base URL first.';
+          return;
+        }
+
+        if (!force && Array.isArray(window.__materialsCache)) {
+          renderMaterials(window.__materialsCache);
+          if (note) note.textContent = `Loaded ${window.__materialsCache.length} materials.`;
+          return;
+        }
+
+        if (note) note.textContent = 'Loading…';
+        renderMaterials([]);
+
+        const res = await fetch(apiUrl(cfg, '/admin/materials'), {
+          headers: {
+            Authorization: authHeader(cfg),
+          },
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          if (note) note.textContent = `Failed: ${res.status} ${txt}`;
+          return;
+        }
+
+        const data = await res.json();
+        const items = (Array.isArray(data?.items) ? data.items : []).filter(
+          (x) => String(x.category || 'materials').toLowerCase() === 'materials'
+        );
+        window.__materialsCache = items;
+        renderMaterials(items);
+        if (note) note.textContent = `Loaded ${items.length} materials.`;
+      }
+
+      async function loadYears({ force = false } = {}) {
+        const cfg = getCfg();
+        const note = qs('#yearsNote');
+
+        if (!cfg.apiBase) {
+          if (note) note.textContent = 'Set API base URL first.';
+          return;
+        }
+
+        if (!force && Array.isArray(window.__yearsCache)) {
+          renderYears(window.__yearsCache);
+          if (note) note.textContent = `Loaded ${window.__yearsCache.length} papers.`;
+          return;
+        }
+
+        if (note) note.textContent = 'Loading…';
+        renderYears([]);
+
+        const res = await fetch(apiUrl(cfg, '/admin/materials'), {
+          headers: {
+            Authorization: authHeader(cfg),
+          },
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          if (note) note.textContent = `Failed: ${res.status} ${txt}`;
+          return;
+        }
+
+        const data = await res.json();
+        const items = (Array.isArray(data?.items) ? data.items : []).filter(
+          (x) => String(x.category || 'materials').toLowerCase() === 'yearspapers'
+        );
+        window.__yearsCache = items;
+        renderYears(items);
+        if (note) note.textContent = `Loaded ${items.length} papers.`;
+      }
+
+      async function loadChapters({ force = false } = {}) {
+        const cfg = getCfg();
+        const note = qs('#chaptersNote');
+
+        if (!cfg.apiBase) {
+          if (note) note.textContent = 'Set API base URL first.';
+          return;
+        }
+
+        if (!force && Array.isArray(window.__chaptersCache)) {
+          renderChapters(window.__chaptersCache);
+          if (note) note.textContent = `Loaded ${window.__chaptersCache.length} items.`;
+          return;
+        }
+
+        if (note) note.textContent = 'Loading…';
+        renderChapters([]);
+
+        const res = await fetch(apiUrl(cfg, '/admin/materials'), {
+          headers: {
+            Authorization: authHeader(cfg),
+          },
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          if (note) note.textContent = `Failed: ${res.status} ${txt}`;
+          return;
+        }
+
+        const data = await res.json();
+        const items = (Array.isArray(data?.items) ? data.items : []).filter(
+          (x) => String(x.category || 'materials').toLowerCase() === 'chaptersolutions'
+        );
+        window.__chaptersCache = items;
+        renderChapters(items);
+        if (note) note.textContent = `Loaded ${items.length} items.`;
       }
 
       function getCfg() {
@@ -120,8 +621,234 @@
       }
 
       function apiUrl(cfg, path) {
-        const base = String(cfg.apiBase || '').replace(/\/+$|\s+$/g, '');
+        const base = String(cfg.apiBase || '').replace(/\/+$/g, '').replace(/\s+$/g, '');
         return `${base}${path}`;
+      }
+
+      function setActiveTab(name) {
+        const a = String(name || 'lectures');
+        localStorage.setItem('optimum_admin_tab_v1', a);
+
+        const tabL = qs('#tabLectures');
+        const tabM = qs('#tabMaterials');
+        const tabY = qs('#tabYears');
+        const tabC = qs('#tabChapters');
+        const tabA = qs('#tabAnnouncements');
+        const tabT = qs('#tabTimetables');
+        const pL = qs('#panelLectures');
+        const pM = qs('#panelMaterials');
+        const pY = qs('#panelYears');
+        const pC = qs('#panelChapters');
+        const pA = qs('#panelAnnouncements');
+        const pT = qs('#panelTimetables');
+        const subtitle = qs('#pageSubtitle');
+
+        if (tabL) tabL.classList.toggle('btn-primary', a === 'lectures');
+        if (tabM) tabM.classList.toggle('btn-primary', a === 'materials');
+        if (tabY) tabY.classList.toggle('btn-primary', a === 'yearspapers');
+        if (tabC) tabC.classList.toggle('btn-primary', a === 'chaptersolutions');
+        if (tabA) tabA.classList.toggle('btn-primary', a === 'announcements');
+        if (tabT) tabT.classList.toggle('btn-primary', a === 'timetables');
+
+        if (pL) pL.hidden = a !== 'lectures';
+        if (pM) pM.hidden = a !== 'materials';
+        if (pY) pY.hidden = a !== 'yearspapers';
+        if (pC) pC.hidden = a !== 'chaptersolutions';
+        if (pA) pA.hidden = a !== 'announcements';
+        if (pT) pT.hidden = a !== 'timetables';
+
+        if (subtitle) {
+          subtitle.textContent =
+            a === 'materials'
+              ? 'Upload and manage study materials'
+              : a === 'yearspapers'
+                ? "Upload and manage year's papers"
+                : a === 'chaptersolutions'
+                  ? 'Upload and manage chapter solutions'
+                  : a === 'announcements'
+                    ? 'Create and manage announcements'
+                    : a === 'timetables'
+                      ? 'Upload and manage time-tables'
+                  : 'Manage recorded lectures';
+        }
+
+        if (a === 'materials') loadMaterials({ force: true });
+        else if (a === 'yearspapers') loadYears({ force: true });
+        else if (a === 'chaptersolutions') loadChapters({ force: true });
+        else if (a === 'announcements') loadAnnouncements({ force: true });
+        else if (a === 'timetables') loadTimetables({ force: true });
+        else loadList({ force: false });
+      }
+
+      function renderAnnouncements(items) {
+        const list = qs('#announcementsList');
+        if (!list) return;
+        list.innerHTML = '';
+
+        items.forEach((item) => {
+          const row = document.createElement('div');
+          row.className = 'info-item';
+          row.style.gridTemplateColumns = '1fr auto';
+          row.innerHTML = `
+            <div>
+              <div style="font-weight:900">Class ${item.class} • ${item.section}</div>
+              <div class="muted" style="font-size:12px; margin-top:6px">${String(item.text || '').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</div>
+              <div class="muted" style="font-size:12px; margin-top:4px">${item.createdAt || ''}</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end">
+              <button class="btn btn-ghost" type="button" data-adel="${item.id}">Delete</button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+
+        list.querySelectorAll('[data-adel]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-adel');
+            if (!id) return;
+            if (!confirm('Delete this announcement?')) return;
+
+            const cfg2 = getCfg();
+            const res2 = await fetch(apiUrl(cfg2, `/admin/announcements/${id}`), {
+              method: 'DELETE',
+              headers: {
+                Authorization: authHeader(cfg2),
+              },
+            });
+
+            if (!res2.ok) {
+              const txt = await res2.text();
+              qs('#announcementNote').textContent = `Delete failed: ${res2.status} ${txt}`;
+              return;
+            }
+
+            await loadAnnouncements({ force: true });
+          });
+        });
+      }
+
+      function renderTimetables(items) {
+        const list = qs('#timetablesList');
+        if (!list) return;
+        list.innerHTML = '';
+
+        items.forEach((item) => {
+          const row = document.createElement('div');
+          row.className = 'info-item';
+          row.style.gridTemplateColumns = '1fr auto';
+          const title = (item.title || item.fileName || 'Time-table').trim();
+          const link = item.webViewLink || item.webContentLink || '';
+          row.innerHTML = `
+            <div>
+              <div style="font-weight:900">Class ${item.class} • ${item.section}</div>
+              <div class="muted" style="font-size:12px; margin-top:4px">${title}</div>
+              ${link ? `<div class="muted" style="font-size:12px; margin-top:4px; word-break:break-all"><a href="${link}" target="_blank" rel="noopener">Open PDF</a></div>` : ''}
+              <div class="muted" style="font-size:12px; margin-top:4px">${item.createdAt || ''}</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end">
+              <button class="btn btn-ghost" type="button" data-tdel="${item.id}">Delete</button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+
+        list.querySelectorAll('[data-tdel]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-tdel');
+            if (!id) return;
+            if (!confirm('Delete this time-table?')) return;
+
+            const cfg2 = getCfg();
+            const res2 = await fetch(apiUrl(cfg2, `/admin/timetables/${id}`), {
+              method: 'DELETE',
+              headers: {
+                Authorization: authHeader(cfg2),
+              },
+            });
+
+            if (!res2.ok) {
+              const txt = await res2.text();
+              qs('#timetableNote').textContent = `Delete failed: ${res2.status} ${txt}`;
+              return;
+            }
+
+            await loadTimetables({ force: true });
+          });
+        });
+      }
+
+      async function loadAnnouncements({ force = false } = {}) {
+        const cfg = getCfg();
+        const note = qs('#announcementNote');
+
+        if (!cfg.apiBase) {
+          if (note) note.textContent = 'Set API base URL first.';
+          return;
+        }
+
+        if (!force && Array.isArray(window.__announcementsCache)) {
+          renderAnnouncements(window.__announcementsCache);
+          if (note) note.textContent = `Loaded ${window.__announcementsCache.length} announcements.`;
+          return;
+        }
+
+        if (note) note.textContent = 'Loading…';
+        renderAnnouncements([]);
+
+        const res = await fetch(apiUrl(cfg, '/admin/announcements'), {
+          headers: {
+            Authorization: authHeader(cfg),
+          },
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          if (note) note.textContent = `Failed: ${res.status} ${txt}`;
+          return;
+        }
+
+        const data = await res.json();
+        const items = Array.isArray(data?.items) ? data.items : [];
+        window.__announcementsCache = items;
+        renderAnnouncements(items);
+        if (note) note.textContent = `Loaded ${items.length} announcements.`;
+      }
+
+      async function loadTimetables({ force = false } = {}) {
+        const cfg = getCfg();
+        const note = qs('#timetableNote');
+
+        if (!cfg.apiBase) {
+          if (note) note.textContent = 'Set API base URL first.';
+          return;
+        }
+
+        if (!force && Array.isArray(window.__timetablesCache)) {
+          renderTimetables(window.__timetablesCache);
+          if (note) note.textContent = `Loaded ${window.__timetablesCache.length} time-tables.`;
+          return;
+        }
+
+        if (note) note.textContent = 'Loading…';
+        renderTimetables([]);
+
+        const res = await fetch(apiUrl(cfg, '/admin/timetables'), {
+          headers: {
+            Authorization: authHeader(cfg),
+          },
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          if (note) note.textContent = `Failed: ${res.status} ${txt}`;
+          return;
+        }
+
+        const data = await res.json();
+        const items = Array.isArray(data?.items) ? data.items : [];
+        window.__timetablesCache = items;
+        renderTimetables(items);
+        if (note) note.textContent = `Loaded ${items.length} time-tables.`;
       }
 
       function uniqSorted(arr) {
@@ -272,21 +999,31 @@
           qs('#note').textContent = 'Not logged in. Go back and open Dashboard again.';
         }
 
-        qs('#save').addEventListener('click', async () => {
-          const prev = getCfg();
-          const advancedOpen = !!qs('#advanced')?.open;
-          const nextBase = advancedOpen ? qs('#apiBase')?.value.trim() : (prev.apiBase || DEFAULT_API_BASE);
-          setCfg({
-            ...prev,
-            apiBase: nextBase,
+        const saveBtn = qs('#save');
+        if (saveBtn) {
+          saveBtn.addEventListener('click', async () => {
+            const prev = getCfg();
+            const advancedOpen = !!qs('#advanced')?.open;
+            const nextBase = advancedOpen ? qs('#apiBase')?.value.trim() : (prev.apiBase || DEFAULT_API_BASE);
+            setCfg({
+              ...prev,
+              apiBase: nextBase,
+            });
+            await loadList();
           });
-          await loadList();
-        });
+        }
 
         qs('#logout').addEventListener('click', () => {
           localStorage.removeItem(storageKey);
           window.location.href = 'index.html';
         });
+
+        qs('#tabLectures').addEventListener('click', () => setActiveTab('lectures'));
+        qs('#tabMaterials').addEventListener('click', () => setActiveTab('materials'));
+        qs('#tabYears').addEventListener('click', () => setActiveTab('yearspapers'));
+        qs('#tabChapters').addEventListener('click', () => setActiveTab('chaptersolutions'));
+        qs('#tabAnnouncements').addEventListener('click', () => setActiveTab('announcements'));
+        qs('#tabTimetables').addEventListener('click', () => setActiveTab('timetables'));
 
         qs('#refresh').addEventListener('click', () => loadList({ force: true }));
 
@@ -325,7 +1062,147 @@
           await loadList({ force: true });
         });
 
-        loadList({ force: true });
+        qs('#materialsRefresh').addEventListener('click', () => loadMaterials({ force: true }));
+        qs('#yearsRefresh').addEventListener('click', () => loadYears({ force: true }));
+        qs('#chaptersRefresh').addEventListener('click', () => loadChapters({ force: true }));
+        qs('#announcementsRefresh').addEventListener('click', () => loadAnnouncements({ force: true }));
+        qs('#timetablesRefresh').addEventListener('click', () => loadTimetables({ force: true }));
+
+        qs('#materialForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const cfg2 = getCfg();
+          const note = qs('#materialNote');
+          note.textContent = 'Uploading…';
+
+          const fd = new FormData(e.target);
+          const res = await fetch(apiUrl(cfg2, '/admin/materials'), {
+            method: 'POST',
+            headers: {
+              Authorization: authHeader(cfg2),
+            },
+            body: fd,
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            note.textContent = `Failed: ${res.status} ${txt}`;
+            return;
+          }
+
+          note.textContent = 'Uploaded.';
+          e.target.reset();
+          await loadMaterials({ force: true });
+        });
+
+        qs('#yearsForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const cfg2 = getCfg();
+          const note = qs('#yearsNote');
+          note.textContent = 'Uploading…';
+
+          const fd = new FormData(e.target);
+          const res = await fetch(apiUrl(cfg2, '/admin/materials'), {
+            method: 'POST',
+            headers: {
+              Authorization: authHeader(cfg2),
+            },
+            body: fd,
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            note.textContent = `Failed: ${res.status} ${txt}`;
+            return;
+          }
+
+          note.textContent = 'Uploaded.';
+          e.target.reset();
+          await loadYears({ force: true });
+        });
+
+        qs('#chaptersForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const cfg2 = getCfg();
+          const note = qs('#chaptersNote');
+          note.textContent = 'Uploading…';
+
+          const fd = new FormData(e.target);
+          const res = await fetch(apiUrl(cfg2, '/admin/materials'), {
+            method: 'POST',
+            headers: {
+              Authorization: authHeader(cfg2),
+            },
+            body: fd,
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            note.textContent = `Failed: ${res.status} ${txt}`;
+            return;
+          }
+
+          note.textContent = 'Uploaded.';
+          e.target.reset();
+          await loadChapters({ force: true });
+        });
+
+        qs('#announcementForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const cfg2 = getCfg();
+          const note = qs('#announcementNote');
+          note.textContent = 'Submitting…';
+
+          const fd = new FormData(e.target);
+          const payload = Object.fromEntries(fd.entries());
+
+          const res = await fetch(apiUrl(cfg2, '/admin/announcements'), {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              Authorization: authHeader(cfg2),
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            note.textContent = `Failed: ${res.status} ${txt}`;
+            return;
+          }
+
+          note.textContent = 'Submitted.';
+          e.target.reset();
+          await loadAnnouncements({ force: true });
+        });
+
+        qs('#timetableForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const cfg2 = getCfg();
+          const note = qs('#timetableNote');
+          note.textContent = 'Uploading…';
+
+          const fd = new FormData(e.target);
+          const res = await fetch(apiUrl(cfg2, '/admin/timetables'), {
+            method: 'POST',
+            headers: {
+              Authorization: authHeader(cfg2),
+            },
+            body: fd,
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            note.textContent = `Failed: ${res.status} ${txt}`;
+            return;
+          }
+
+          note.textContent = 'Uploaded.';
+          e.target.reset();
+          await loadTimetables({ force: true });
+        });
+
+        const initial = localStorage.getItem('optimum_admin_tab_v1') || 'lectures';
+        setActiveTab(initial);
       })();
     </script>
   </body>
