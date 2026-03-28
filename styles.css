@@ -771,6 +771,13 @@ img{max-width:100%; display:block}
 .card h3{margin:0 0 8px; font-size:16px}
 .card p{margin:0 0 12px; color:rgba(31,42,36,.74); line-height:1.55; font-size:13px}
 
+.founder-speak{grid-template-columns:minmax(280px, 420px) minmax(0, 1fr); align-items:start}
+.founder-speak-photo{padding:14px}
+.founder-speak-img{width:100%; height:auto; border-radius:14px; display:block; aspect-ratio:4/5; object-fit:cover}
+
+.founder-speaks .section-head{justify-content:flex-start; align-items:baseline; flex-wrap:wrap}
+.founder-speaks .section-head p{max-width:unset}
+
 .card-accent{
   background:linear-gradient(180deg, rgba(245,158,11,.18), rgba(255,255,255,.72));
   border-color:rgba(245,158,11,.32);

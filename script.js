@@ -265,7 +265,7 @@ function setupForms() {
   const contact = qs('#contactForm');
   const contactNote = qs('#contactNote');
 
-  const handle = (form, noteEl) => {
+  const handleDemo = (form, noteEl) => {
     if (!form || !noteEl) return;
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -274,8 +274,48 @@ function setupForms() {
     });
   };
 
-  handle(lead, leadNote);
-  handle(contact, contactNote);
+  handleDemo(lead, leadNote);
+
+  if (contact && contactNote) {
+    contact.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      contactNote.textContent = 'Sending…';
+
+      const fd = new FormData(contact);
+      const payload = {
+        name: String(fd.get('name') || '').trim(),
+        phone: String(fd.get('phone') || '').trim(),
+        message: String(fd.get('message') || '').trim(),
+      };
+
+      try {
+        const res = await fetch(API_BASE + '/contact', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          let msg = `Failed: ${res.status}`;
+          try {
+            const j = await res.json();
+            if (j?.message) msg = j.message;
+          } catch {
+            // ignore
+          }
+          contactNote.textContent = msg;
+          return;
+        }
+
+        contactNote.textContent = 'Sent! We will get back to you soon.';
+        contact.reset();
+      } catch {
+        contactNote.textContent = 'Failed to send. Please try again.';
+      }
+    });
+  }
 }
 
 function setupEnquireModal() {
