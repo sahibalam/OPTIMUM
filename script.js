@@ -914,6 +914,8 @@ function loadStudyMaterials({ class: klass } = {}) {
         const link = it.webViewLink || it.webContentLink || '';
         const isYears = category === 'yearspapers' || String(it.category || '').toLowerCase() === 'yearspapers';
         const yearLabel = (it.year || '').toString().trim();
+        const fileId = String(it.fileId || '').trim();
+        const thumb = fileId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w320` : 'assets/notes/note1.png';
 
         const card = document.createElement('article');
         card.className = 'note-card';
@@ -928,7 +930,7 @@ function loadStudyMaterials({ class: klass } = {}) {
           <div class="note-top">
             <div class="note-title"><strong>${escapeHtml(title)}</strong><br />${isYears ? "year's papers" : 'revision notes'}</div>
           </div>
-          <div class="note-circle"><img src="assets/notes/note1.png" alt="${escapeHtml(title)}" /></div>
+          <div class="note-circle"><img src="${thumb}" alt="${escapeHtml(title)}" onerror="this.onerror=null;this.src='assets/notes/note1.png';" /></div>
         `;
 
         const open = () => {
