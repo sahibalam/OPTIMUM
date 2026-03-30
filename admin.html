@@ -861,6 +861,172 @@
         return Array.from(s).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
       }
 
+      const MAX_PDF_BYTES = 250 * 1024 * 1024;
+      const RESUMABLE_CHUNK_BYTES = 4 * 1024 * 1024;
+
+      function formatBytes(bytes) {
+        const b = Number(bytes || 0);
+        if (!b) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.min(units.length - 1, Math.floor(Math.log(b) / Math.log(1024)));
+        const v = b / Math.pow(1024, i);
+        return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+      }
+
+      function validatePdfSizeFromForm(formEl, noteEl) {
+        if (!formEl) return true;
+        const fd = new FormData(formEl);
+        const f = fd.get('file');
+        if (!f || typeof f !== 'object' || typeof f.size !== 'number') return true;
+        if (f.size > MAX_PDF_BYTES) {
+          if (noteEl) {
+            noteEl.textContent = `PDF too large (${formatBytes(f.size)}). Please upload a file under ${formatBytes(MAX_PDF_BYTES)}.`;
+          }
+          return false;
+        }
+        return true;
+      }
+
+      async function startResumableSession({ cfg, path, file }) {
+        const res = await fetch(apiUrl(cfg, path), {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            Authorization: authHeader(cfg),
+          },
+          body: JSON.stringify({
+            fileName: file?.name || 'upload.pdf',
+            mimeType: file?.type || 'application/pdf',
+            size: file?.size || 0,
+          }),
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Start failed: ${res.status} ${txt}`);
+        }
+
+        const data = await res.json();
+        if (!data?.uploadUrl || !data?.accessToken) {
+          throw new Error('Start failed: missing uploadUrl/accessToken');
+        }
+
+        return data;
+      }
+
+      async function uploadResumableChunks({ cfg, chunkPath, uploadUrl, file, onProgress }) {
+        const total = file.size;
+        let offset = 0;
+
+        while (offset < total) {
+          const end = Math.min(total, offset + RESUMABLE_CHUNK_BYTES);
+          const chunk = file.slice(offset, end);
+          const contentRange = `bytes ${offset}-${end - 1}/${total}`;
+
+          const res = await fetch(apiUrl(cfg, chunkPath), {
+            method: 'PUT',
+            headers: {
+              Authorization: authHeader(cfg),
+              'Content-Type': 'application/octet-stream',
+              'Content-Length': String(chunk.size),
+              'Content-Range': contentRange,
+              'X-Upload-URL': uploadUrl,
+            },
+            body: chunk,
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(`Chunk upload failed: ${res.status} ${txt}`);
+          }
+
+          const proxy = await res.json();
+          const st = Number(proxy?.status || 0);
+
+          if (st === 308) {
+            offset = end;
+            if (typeof onProgress === 'function') onProgress(offset, total);
+            continue;
+          }
+
+          if (st >= 200 && st < 300) {
+            const fileId = proxy?.data?.id;
+            if (!fileId) throw new Error('Upload finished but missing Drive file id');
+            if (typeof onProgress === 'function') onProgress(total, total);
+            return { fileId };
+          }
+
+          throw new Error(`Chunk upload failed: Drive status ${st}`);
+        }
+
+        throw new Error('Upload failed: unexpected end');
+      }
+
+      async function finalizeResumableUpload({ cfg, path, payload }) {
+        const res = await fetch(apiUrl(cfg, path), {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            Authorization: authHeader(cfg),
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Finalize failed: ${res.status} ${txt}`);
+        }
+
+        return await res.json();
+      }
+
+      async function uploadPdfViaResumable({
+        cfg,
+        formEl,
+        noteEl,
+        startPath,
+        chunkPath,
+        finalizePath,
+        buildFinalizePayload,
+        onDone,
+      }) {
+        const fd = new FormData(formEl);
+        const file = fd.get('file');
+        if (!file || typeof file !== 'object' || typeof file.size !== 'number') {
+          throw new Error('Missing PDF file');
+        }
+        if (!String(file.type || '').toLowerCase().includes('pdf')) {
+          throw new Error('Only PDF is allowed');
+        }
+
+        if (!validatePdfSizeFromForm(formEl, noteEl)) return;
+
+        if (noteEl) noteEl.textContent = 'Starting upload…';
+
+        const { uploadUrl } = await startResumableSession({ cfg, path: startPath, file });
+
+        if (noteEl) noteEl.textContent = 'Uploading… 0%';
+        const up = await uploadResumableChunks({
+          cfg,
+          chunkPath,
+          uploadUrl,
+          file,
+          onProgress: (sent, total) => {
+            const pct = total ? Math.round((sent / total) * 100) : 0;
+            if (noteEl) noteEl.textContent = `Uploading… ${pct}%`;
+          },
+        });
+
+        if (noteEl) noteEl.textContent = 'Finalizing…';
+
+        const finalizePayload = buildFinalizePayload({ fd, fileId: up.fileId, fileName: file.name });
+        await finalizeResumableUpload({ cfg, path: finalizePath, payload: finalizePayload });
+
+        if (noteEl) noteEl.textContent = 'Uploaded.';
+        formEl.reset();
+        if (typeof onDone === 'function') await onDone();
+      }
+
       function setSelectOptions(selectEl, values) {
         if (!selectEl) return;
         const keep = selectEl.value;
@@ -1077,78 +1243,90 @@
           e.preventDefault();
           const cfg2 = getCfg();
           const note = qs('#materialNote');
-          note.textContent = 'Uploading…';
-
-          const fd = new FormData(e.target);
-          const res = await fetch(apiUrl(cfg2, '/admin/materials'), {
-            method: 'POST',
-            headers: {
-              Authorization: authHeader(cfg2),
-            },
-            body: fd,
-          });
-
-          if (!res.ok) {
-            const txt = await res.text();
-            note.textContent = `Failed: ${res.status} ${txt}`;
-            return;
+          try {
+            await uploadPdfViaResumable({
+              cfg: cfg2,
+              formEl: e.target,
+              noteEl: note,
+              startPath: '/admin/materials/resumable/start',
+              chunkPath: '/admin/materials/resumable/chunk',
+              finalizePath: '/admin/materials/resumable/finalize',
+              buildFinalizePayload: ({ fd, fileId, fileName }) => ({
+                category: String(fd.get('category') || 'materials'),
+                class: String(fd.get('class') || ''),
+                section: String(fd.get('section') || ''),
+                subject: String(fd.get('subject') || ''),
+                title: String(fd.get('title') || ''),
+                year: String(fd.get('year') || ''),
+                chapter: String(fd.get('chapter') || ''),
+                fileId,
+                fileName,
+              }),
+              onDone: async () => loadMaterials({ force: true }),
+            });
+          } catch (err) {
+            note.textContent = `Failed: ${err?.message || 'Upload failed'}`;
           }
-
-          note.textContent = 'Uploaded.';
-          e.target.reset();
-          await loadMaterials({ force: true });
         });
 
         qs('#yearsForm').addEventListener('submit', async (e) => {
           e.preventDefault();
           const cfg2 = getCfg();
           const note = qs('#yearsNote');
-          note.textContent = 'Uploading…';
-
-          const fd = new FormData(e.target);
-          const res = await fetch(apiUrl(cfg2, '/admin/materials'), {
-            method: 'POST',
-            headers: {
-              Authorization: authHeader(cfg2),
-            },
-            body: fd,
-          });
-
-          if (!res.ok) {
-            const txt = await res.text();
-            note.textContent = `Failed: ${res.status} ${txt}`;
-            return;
+          try {
+            await uploadPdfViaResumable({
+              cfg: cfg2,
+              formEl: e.target,
+              noteEl: note,
+              startPath: '/admin/materials/resumable/start',
+              chunkPath: '/admin/materials/resumable/chunk',
+              finalizePath: '/admin/materials/resumable/finalize',
+              buildFinalizePayload: ({ fd, fileId, fileName }) => ({
+                category: String(fd.get('category') || 'yearspapers'),
+                class: String(fd.get('class') || ''),
+                section: String(fd.get('section') || ''),
+                subject: String(fd.get('subject') || ''),
+                title: String(fd.get('title') || ''),
+                year: String(fd.get('year') || ''),
+                chapter: String(fd.get('chapter') || ''),
+                fileId,
+                fileName,
+              }),
+              onDone: async () => loadYears({ force: true }),
+            });
+          } catch (err) {
+            note.textContent = `Failed: ${err?.message || 'Upload failed'}`;
           }
-
-          note.textContent = 'Uploaded.';
-          e.target.reset();
-          await loadYears({ force: true });
         });
 
         qs('#chaptersForm').addEventListener('submit', async (e) => {
           e.preventDefault();
           const cfg2 = getCfg();
           const note = qs('#chaptersNote');
-          note.textContent = 'Uploading…';
-
-          const fd = new FormData(e.target);
-          const res = await fetch(apiUrl(cfg2, '/admin/materials'), {
-            method: 'POST',
-            headers: {
-              Authorization: authHeader(cfg2),
-            },
-            body: fd,
-          });
-
-          if (!res.ok) {
-            const txt = await res.text();
-            note.textContent = `Failed: ${res.status} ${txt}`;
-            return;
+          try {
+            await uploadPdfViaResumable({
+              cfg: cfg2,
+              formEl: e.target,
+              noteEl: note,
+              startPath: '/admin/materials/resumable/start',
+              chunkPath: '/admin/materials/resumable/chunk',
+              finalizePath: '/admin/materials/resumable/finalize',
+              buildFinalizePayload: ({ fd, fileId, fileName }) => ({
+                category: String(fd.get('category') || 'chaptersolutions'),
+                class: String(fd.get('class') || ''),
+                section: String(fd.get('section') || ''),
+                subject: String(fd.get('subject') || ''),
+                title: String(fd.get('title') || ''),
+                year: String(fd.get('year') || ''),
+                chapter: String(fd.get('chapter') || ''),
+                fileId,
+                fileName,
+              }),
+              onDone: async () => loadChapters({ force: true }),
+            });
+          } catch (err) {
+            note.textContent = `Failed: ${err?.message || 'Upload failed'}`;
           }
-
-          note.textContent = 'Uploaded.';
-          e.target.reset();
-          await loadChapters({ force: true });
         });
 
         qs('#announcementForm').addEventListener('submit', async (e) => {
@@ -1184,26 +1362,26 @@
           e.preventDefault();
           const cfg2 = getCfg();
           const note = qs('#timetableNote');
-          note.textContent = 'Uploading…';
-
-          const fd = new FormData(e.target);
-          const res = await fetch(apiUrl(cfg2, '/admin/timetables'), {
-            method: 'POST',
-            headers: {
-              Authorization: authHeader(cfg2),
-            },
-            body: fd,
-          });
-
-          if (!res.ok) {
-            const txt = await res.text();
-            note.textContent = `Failed: ${res.status} ${txt}`;
-            return;
+          try {
+            await uploadPdfViaResumable({
+              cfg: cfg2,
+              formEl: e.target,
+              noteEl: note,
+              startPath: '/admin/timetables/resumable/start',
+              chunkPath: '/admin/timetables/resumable/chunk',
+              finalizePath: '/admin/timetables/resumable/finalize',
+              buildFinalizePayload: ({ fd, fileId, fileName }) => ({
+                class: String(fd.get('class') || ''),
+                section: String(fd.get('section') || ''),
+                title: String(fd.get('title') || ''),
+                fileId,
+                fileName,
+              }),
+              onDone: async () => loadTimetables({ force: true }),
+            });
+          } catch (err) {
+            note.textContent = `Failed: ${err?.message || 'Upload failed'}`;
           }
-
-          note.textContent = 'Uploaded.';
-          e.target.reset();
-          await loadTimetables({ force: true });
         });
 
         const initial = localStorage.getItem('optimum_admin_tab_v1') || 'lectures';
