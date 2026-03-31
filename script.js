@@ -910,7 +910,10 @@ function loadStudyMaterials({ class: klass } = {}) {
 
       items.slice(0, 12).forEach((it, idx) => {
         const c = palette[idx % palette.length];
-        const title = (it.title || it.fileName || 'Revision Notes').trim();
+        const subjectLabel = String(it.subject || '').trim();
+        const chapterLabel = String(it.chapter || '').trim();
+        const isChapterSolutions = category === 'chaptersolutions' || String(it.category || '').toLowerCase() === 'chaptersolutions';
+        const title = (isChapterSolutions ? subjectLabel : it.title || it.fileName || 'Revision Notes').toString().trim();
         const link = it.webViewLink || it.webContentLink || '';
         const isYears = category === 'yearspapers' || String(it.category || '').toLowerCase() === 'yearspapers';
         const yearLabel = (it.year || '').toString().trim();
@@ -928,7 +931,9 @@ function loadStudyMaterials({ class: klass } = {}) {
         card.dataset.category = isYears ? 'yearspapers' : 'materials';
         card.innerHTML = `
           <div class="note-top">
-            <div class="note-title"><strong>${escapeHtml(title)}</strong><br />${isYears ? "year's papers" : 'revision notes'}</div>
+            <div class="note-title"><strong>${escapeHtml(title || 'Chapter Solution')}</strong><br />${
+              isYears ? "year's papers" : isChapterSolutions ? escapeHtml(chapterLabel || 'chapter solution') : 'revision notes'
+            }</div>
           </div>
           <div class="note-circle"><img src="${thumb}" alt="${escapeHtml(title)}" onerror="this.onerror=null;this.src='assets/notes/note1.png';" /></div>
         `;
