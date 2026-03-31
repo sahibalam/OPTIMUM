@@ -154,6 +154,24 @@
                   <h3 style="margin-top:0">Study Materials</h3>
                   <div class="form" style="padding:0">
                     <div style="display:flex; gap:10px; flex-wrap:wrap">
+                      <label style="margin:0">
+                        <span>Class</span>
+                        <select id="materialsFilterClass">
+                          <option value="">All</option>
+                        </select>
+                      </label>
+                      <label style="margin:0">
+                        <span>Section</span>
+                        <select id="materialsFilterSection">
+                          <option value="">All</option>
+                        </select>
+                      </label>
+                      <label style="margin:0">
+                        <span>Subject</span>
+                        <select id="materialsFilterSubject">
+                          <option value="">All</option>
+                        </select>
+                      </label>
                       <button id="materialsRefresh" class="btn btn-ghost" type="button">Refresh</button>
                     </div>
                   </div>
@@ -201,6 +219,30 @@
                   <h3 style="margin-top:0">Year's Papers</h3>
                   <div class="form" style="padding:0">
                     <div style="display:flex; gap:10px; flex-wrap:wrap">
+                      <label style="margin:0">
+                        <span>Class</span>
+                        <select id="yearsFilterClass">
+                          <option value="">All</option>
+                        </select>
+                      </label>
+                      <label style="margin:0">
+                        <span>Section</span>
+                        <select id="yearsFilterSection">
+                          <option value="">All</option>
+                        </select>
+                      </label>
+                      <label style="margin:0">
+                        <span>Subject</span>
+                        <select id="yearsFilterSubject">
+                          <option value="">All</option>
+                        </select>
+                      </label>
+                      <label style="margin:0">
+                        <span>Year</span>
+                        <select id="yearsFilterYear">
+                          <option value="">All</option>
+                        </select>
+                      </label>
                       <button id="yearsRefresh" class="btn btn-ghost" type="button">Refresh</button>
                     </div>
                   </div>
@@ -248,6 +290,30 @@
                   <h3 style="margin-top:0">Chapters Solution</h3>
                   <div class="form" style="padding:0">
                     <div style="display:flex; gap:10px; flex-wrap:wrap">
+                      <label style="margin:0">
+                        <span>Class</span>
+                        <select id="chaptersFilterClass">
+                          <option value="">All</option>
+                        </select>
+                      </label>
+                      <label style="margin:0">
+                        <span>Section</span>
+                        <select id="chaptersFilterSection">
+                          <option value="">All</option>
+                        </select>
+                      </label>
+                      <label style="margin:0">
+                        <span>Subject</span>
+                        <select id="chaptersFilterSubject">
+                          <option value="">All</option>
+                        </select>
+                      </label>
+                      <label style="margin:0">
+                        <span>Chapter</span>
+                        <select id="chaptersFilterChapter">
+                          <option value="">All</option>
+                        </select>
+                      </label>
                       <button id="chaptersRefresh" class="btn btn-ghost" type="button">Refresh</button>
                     </div>
                   </div>
@@ -337,6 +403,68 @@
 
       function b64(s) {
         return btoa(unescape(encodeURIComponent(s)));
+      }
+
+      function applyMaterialsFilters() {
+        const all = Array.isArray(window.__materialsCache) ? window.__materialsCache : [];
+        const fc = qs('#materialsFilterClass')?.value || '';
+        const fs = qs('#materialsFilterSection')?.value || '';
+        const fj = qs('#materialsFilterSubject')?.value || '';
+        const filtered = all.filter((x) => {
+          if (fc && String(x.class || '') !== fc) return false;
+          if (fs && String(x.section || '') !== fs) return false;
+          if (fj && String(x.subject || '') !== fj) return false;
+          return true;
+        });
+        renderMaterials(filtered);
+        return filtered;
+      }
+
+      function applyYearsFilters() {
+        const all = Array.isArray(window.__yearsCache) ? window.__yearsCache : [];
+        const fc = qs('#yearsFilterClass')?.value || '';
+        const fs = qs('#yearsFilterSection')?.value || '';
+        const fj = qs('#yearsFilterSubject')?.value || '';
+        const fy = qs('#yearsFilterYear')?.value || '';
+        const filtered = all.filter((x) => {
+          if (fc && String(x.class || '') !== fc) return false;
+          if (fs && String(x.section || '') !== fs) return false;
+          if (fj && String(x.subject || '') !== fj) return false;
+          if (fy && String(x.year || '') !== fy) return false;
+          return true;
+        });
+        renderYears(filtered);
+        return filtered;
+      }
+
+      function applyChaptersFilters() {
+        const all = Array.isArray(window.__chaptersCache) ? window.__chaptersCache : [];
+        const fc = qs('#chaptersFilterClass')?.value || '';
+        const fs = qs('#chaptersFilterSection')?.value || '';
+        const fj = qs('#chaptersFilterSubject')?.value || '';
+        const fp = qs('#chaptersFilterChapter')?.value || '';
+        const filtered = all.filter((x) => {
+          if (fc && String(x.class || '') !== fc) return false;
+          if (fs && String(x.section || '') !== fs) return false;
+          if (fj && String(x.subject || '') !== fj) return false;
+          if (fp && String(x.chapter || '') !== fp) return false;
+          return true;
+        });
+        renderChapters(filtered);
+        return filtered;
+      }
+
+      function applyTimetablesFilters() {
+        const all = Array.isArray(window.__timetablesCache) ? window.__timetablesCache : [];
+        const fc = qs('#timetablesFilterClass')?.value || '';
+        const fs = qs('#timetablesFilterSection')?.value || '';
+        const filtered = all.filter((x) => {
+          if (fc && String(x.class || '') !== fc) return false;
+          if (fs && String(x.section || '') !== fs) return false;
+          return true;
+        });
+        renderTimetables(filtered);
+        return filtered;
       }
 
       function renderChapters(items) {
@@ -491,6 +619,56 @@
         });
       }
 
+      function renderTimetables(items) {
+        const list = qs('#timetablesList');
+        if (!list) return;
+        list.innerHTML = '';
+
+        items.forEach((item) => {
+          const row = document.createElement('div');
+          row.className = 'info-item';
+          row.style.gridTemplateColumns = '1fr auto';
+          const title = (item.title || item.fileName || 'Time-table').trim();
+          const link = item.webViewLink || item.webContentLink || '';
+          row.innerHTML = `
+            <div>
+              <div style="font-weight:900">Class ${item.class} • ${item.section}</div>
+              <div class="muted" style="font-size:12px; margin-top:4px">${title}</div>
+              ${link ? `<div class="muted" style="font-size:12px; margin-top:4px; word-break:break-all"><a href="${link}" target="_blank" rel="noopener">Open PDF</a></div>` : ''}
+              <div class="muted" style="font-size:12px; margin-top:4px">${item.createdAt || ''}</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end">
+              <button class="btn btn-ghost" type="button" data-tdel="${item.id}">Delete</button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+
+        list.querySelectorAll('[data-tdel]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-tdel');
+            if (!id) return;
+            if (!confirm('Delete this time-table?')) return;
+
+            const cfg2 = getCfg();
+            const res2 = await fetch(apiUrl(cfg2, `/admin/timetables/${id}`), {
+              method: 'DELETE',
+              headers: {
+                Authorization: authHeader(cfg2),
+              },
+            });
+
+            if (!res2.ok) {
+              const txt = await res2.text();
+              qs('#timetableNote').textContent = `Delete failed: ${res2.status} ${txt}`;
+              return;
+            }
+
+            await loadTimetables({ force: true });
+          });
+        });
+      }
+
       async function loadMaterials({ force = false } = {}) {
         const cfg = getCfg();
         const note = qs('#materialNote');
@@ -501,7 +679,7 @@
         }
 
         if (!force && Array.isArray(window.__materialsCache)) {
-          renderMaterials(window.__materialsCache);
+          applyMaterialsFilters();
           if (note) note.textContent = `Loaded ${window.__materialsCache.length} materials.`;
           return;
         }
@@ -526,7 +704,10 @@
           (x) => String(x.category || 'materials').toLowerCase() === 'materials'
         );
         window.__materialsCache = items;
-        renderMaterials(items);
+        setSelectOptions(qs('#materialsFilterClass'), uniqSorted(items.map((x) => x.class)));
+        setSelectOptions(qs('#materialsFilterSection'), uniqSorted(items.map((x) => x.section)));
+        setSelectOptions(qs('#materialsFilterSubject'), uniqSorted(items.map((x) => x.subject)));
+        applyMaterialsFilters();
         if (note) note.textContent = `Loaded ${items.length} materials.`;
       }
 
@@ -540,7 +721,7 @@
         }
 
         if (!force && Array.isArray(window.__yearsCache)) {
-          renderYears(window.__yearsCache);
+          applyYearsFilters();
           if (note) note.textContent = `Loaded ${window.__yearsCache.length} papers.`;
           return;
         }
@@ -565,7 +746,11 @@
           (x) => String(x.category || 'materials').toLowerCase() === 'yearspapers'
         );
         window.__yearsCache = items;
-        renderYears(items);
+        setSelectOptions(qs('#yearsFilterClass'), uniqSorted(items.map((x) => x.class)));
+        setSelectOptions(qs('#yearsFilterSection'), uniqSorted(items.map((x) => x.section)));
+        setSelectOptions(qs('#yearsFilterSubject'), uniqSorted(items.map((x) => x.subject)));
+        setSelectOptions(qs('#yearsFilterYear'), uniqSorted(items.map((x) => x.year)));
+        applyYearsFilters();
         if (note) note.textContent = `Loaded ${items.length} papers.`;
       }
 
@@ -579,7 +764,7 @@
         }
 
         if (!force && Array.isArray(window.__chaptersCache)) {
-          renderChapters(window.__chaptersCache);
+          applyChaptersFilters();
           if (note) note.textContent = `Loaded ${window.__chaptersCache.length} items.`;
           return;
         }
@@ -604,8 +789,51 @@
           (x) => String(x.category || 'materials').toLowerCase() === 'chaptersolutions'
         );
         window.__chaptersCache = items;
-        renderChapters(items);
+        setSelectOptions(qs('#chaptersFilterClass'), uniqSorted(items.map((x) => x.class)));
+        setSelectOptions(qs('#chaptersFilterSection'), uniqSorted(items.map((x) => x.section)));
+        setSelectOptions(qs('#chaptersFilterSubject'), uniqSorted(items.map((x) => x.subject)));
+        setSelectOptions(qs('#chaptersFilterChapter'), uniqSorted(items.map((x) => x.chapter)));
+        applyChaptersFilters();
         if (note) note.textContent = `Loaded ${items.length} items.`;
+      }
+
+      async function loadTimetables({ force = false } = {}) {
+        const cfg = getCfg();
+        const note = qs('#timetableNote');
+
+        if (!cfg.apiBase) {
+          if (note) note.textContent = 'Set API base URL first.';
+          return;
+        }
+
+        if (!force && Array.isArray(window.__timetablesCache)) {
+          applyTimetablesFilters();
+          if (note) note.textContent = `Loaded ${window.__timetablesCache.length} time-tables.`;
+          return;
+        }
+
+        if (note) note.textContent = 'Loading…';
+        renderTimetables([]);
+
+        const res = await fetch(apiUrl(cfg, '/admin/timetables'), {
+          headers: {
+            Authorization: authHeader(cfg),
+          },
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          if (note) note.textContent = `Failed: ${res.status} ${txt}`;
+          return;
+        }
+
+        const data = await res.json();
+        const items = Array.isArray(data?.items) ? data.items : [];
+        window.__timetablesCache = items;
+        setSelectOptions(qs('#timetablesFilterClass'), uniqSorted(items.map((x) => x.class)));
+        setSelectOptions(qs('#timetablesFilterSection'), uniqSorted(items.map((x) => x.section)));
+        applyTimetablesFilters();
+        if (note) note.textContent = `Loaded ${items.length} time-tables.`;
       }
 
       function getCfg() {
@@ -732,56 +960,6 @@
         });
       }
 
-      function renderTimetables(items) {
-        const list = qs('#timetablesList');
-        if (!list) return;
-        list.innerHTML = '';
-
-        items.forEach((item) => {
-          const row = document.createElement('div');
-          row.className = 'info-item';
-          row.style.gridTemplateColumns = '1fr auto';
-          const title = (item.title || item.fileName || 'Time-table').trim();
-          const link = item.webViewLink || item.webContentLink || '';
-          row.innerHTML = `
-            <div>
-              <div style="font-weight:900">Class ${item.class} • ${item.section}</div>
-              <div class="muted" style="font-size:12px; margin-top:4px">${title}</div>
-              ${link ? `<div class="muted" style="font-size:12px; margin-top:4px; word-break:break-all"><a href="${link}" target="_blank" rel="noopener">Open PDF</a></div>` : ''}
-              <div class="muted" style="font-size:12px; margin-top:4px">${item.createdAt || ''}</div>
-            </div>
-            <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end">
-              <button class="btn btn-ghost" type="button" data-tdel="${item.id}">Delete</button>
-            </div>
-          `;
-          list.appendChild(row);
-        });
-
-        list.querySelectorAll('[data-tdel]').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            const id = btn.getAttribute('data-tdel');
-            if (!id) return;
-            if (!confirm('Delete this time-table?')) return;
-
-            const cfg2 = getCfg();
-            const res2 = await fetch(apiUrl(cfg2, `/admin/timetables/${id}`), {
-              method: 'DELETE',
-              headers: {
-                Authorization: authHeader(cfg2),
-              },
-            });
-
-            if (!res2.ok) {
-              const txt = await res2.text();
-              qs('#timetableNote').textContent = `Delete failed: ${res2.status} ${txt}`;
-              return;
-            }
-
-            await loadTimetables({ force: true });
-          });
-        });
-      }
-
       async function loadAnnouncements({ force = false } = {}) {
         const cfg = getCfg();
         const note = qs('#announcementNote');
@@ -819,45 +997,12 @@
         if (note) note.textContent = `Loaded ${items.length} announcements.`;
       }
 
-      async function loadTimetables({ force = false } = {}) {
-        const cfg = getCfg();
-        const note = qs('#timetableNote');
-
-        if (!cfg.apiBase) {
-          if (note) note.textContent = 'Set API base URL first.';
-          return;
-        }
-
-        if (!force && Array.isArray(window.__timetablesCache)) {
-          renderTimetables(window.__timetablesCache);
-          if (note) note.textContent = `Loaded ${window.__timetablesCache.length} time-tables.`;
-          return;
-        }
-
-        if (note) note.textContent = 'Loading…';
-        renderTimetables([]);
-
-        const res = await fetch(apiUrl(cfg, '/admin/timetables'), {
-          headers: {
-            Authorization: authHeader(cfg),
-          },
-        });
-
-        if (!res.ok) {
-          const txt = await res.text();
-          if (note) note.textContent = `Failed: ${res.status} ${txt}`;
-          return;
-        }
-
-        const data = await res.json();
-        const items = Array.isArray(data?.items) ? data.items : [];
-        window.__timetablesCache = items;
-        renderTimetables(items);
-        if (note) note.textContent = `Loaded ${items.length} time-tables.`;
-      }
-
       function uniqSorted(arr) {
-        const s = new Set(arr.filter((x) => x !== null && x !== undefined && String(x).trim() !== '').map((x) => String(x).trim()));
+        const s = new Set(
+          (Array.isArray(arr) ? arr : [])
+            .filter((x) => x !== null && x !== undefined && String(x).trim() !== '')
+            .map((x) => String(x).trim())
+        );
         return Array.from(s).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
       }
 
@@ -1202,6 +1347,23 @@
           const el = qs(sel);
           if (!el) return;
           el.addEventListener('change', applyFiltersFromCache);
+        });
+
+        ['#materialsFilterClass', '#materialsFilterSection', '#materialsFilterSubject'].forEach((id) => {
+          const el = qs(id);
+          if (el) el.addEventListener('change', applyMaterialsFilters);
+        });
+        ['#yearsFilterClass', '#yearsFilterSection', '#yearsFilterSubject', '#yearsFilterYear'].forEach((id) => {
+          const el = qs(id);
+          if (el) el.addEventListener('change', applyYearsFilters);
+        });
+        ['#chaptersFilterClass', '#chaptersFilterSection', '#chaptersFilterSubject', '#chaptersFilterChapter'].forEach((id) => {
+          const el = qs(id);
+          if (el) el.addEventListener('change', applyChaptersFilters);
+        });
+        ['#timetablesFilterClass', '#timetablesFilterSection'].forEach((id) => {
+          const el = qs(id);
+          if (el) el.addEventListener('change', applyTimetablesFilters);
         });
 
         qs('#createForm').addEventListener('submit', async (e) => {
