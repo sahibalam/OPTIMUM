@@ -699,9 +699,6 @@ function setupLeadPopup() {
       const params = new URLSearchParams();
       params.set('Name', String(name || ''));
       params.set('PhoneNumber', String(phone || ''));
-      params.set('ContactList', '[]');
-      params.set('Tags', '[]');
-      params.set('CustomAttributes', '{}');
 
       await fetch('https://botclap.com/webhook/contact/764610403118927', {
         method: 'POST',
