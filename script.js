@@ -694,6 +694,27 @@ function setupLeadPopup() {
   const note = qs('#leadDialogNote');
   if (!dlg || !form) return;
 
+  const postBotclapLead = async ({ name, phone }) => {
+    try {
+      const params = new URLSearchParams();
+      params.set('Name', String(name || ''));
+      params.set('PhoneNumber', String(phone || ''));
+      params.set('ContactList', '[]');
+      params.set('Tags', '[]');
+      params.set('CustomAttributes', '{}');
+
+      await fetch('https://botclap.com/webhook/contact/764610403118927', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        },
+        body: params.toString(),
+      });
+    } catch {
+      // ignore
+    }
+  };
+
   const key = 'optimum_lead_popup_v1';
   const state = localStorage.getItem(key) || '';
   if (state === 'dismissed' || state === 'submitted') return;
@@ -769,6 +790,8 @@ function setupLeadPopup() {
         if (note) note.textContent = `Failed: ${res.status} ${txt}`;
         return;
       }
+
+      postBotclapLead(payload);
 
       localStorage.setItem(key, 'submitted');
       if (note) note.textContent = 'Submitted. We will call you soon.';
